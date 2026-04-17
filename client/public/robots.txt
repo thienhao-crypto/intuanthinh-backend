@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/admin/
+Disallow: /api/contact-submissions
+
+Sitemap: https://intuanthinh.com/sitemap.xml

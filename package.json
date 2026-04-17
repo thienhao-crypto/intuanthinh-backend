@@ -1,0 +1,25 @@
+{
+  "name": "intuanthinh",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "npm run dev --workspace client",
+    "dev:server": "npm run dev --workspace server",
+    "seo:sync": "node scripts/generate-seo-assets.mjs",
+    "build": "npm run build --workspace client",
+    "build:hosting": "npm run build",
+    "preview": "npm run preview --workspace client",
+    "start": "npm run start --workspace server",
+    "start:server": "npm run start --workspace server",
+    "db:seed": "npm run db:seed --workspace server",
+    "sync:data": "node scripts/sync-site-data.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
