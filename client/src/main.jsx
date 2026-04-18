@@ -1,9 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import maintenanceImage from './assets/partners/anhbaotri.png';
+import { normalizeSiteDataAssetUrls, resolveApiUrl } from './lib/runtimeUrls';
 import './styles.css';
-
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
 function assertSiteData(value) {
   if (!value || typeof value !== 'object') {
@@ -28,7 +27,7 @@ function assertSiteData(value) {
 }
 
 async function loadSiteData() {
-  const response = await fetch(`${apiBaseUrl}/api/bootstrap`, {
+  const response = await fetch(resolveApiUrl('/api/bootstrap'), {
     cache: 'no-store'
   });
 
@@ -36,7 +35,7 @@ async function loadSiteData() {
     throw new Error(`Bootstrap request failed with ${response.status}`);
   }
 
-  return assertSiteData(await response.json());
+  return assertSiteData(normalizeSiteDataAssetUrls(await response.json()));
 }
 
 function StartupErrorScreen() {

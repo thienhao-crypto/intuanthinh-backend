@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { resolveApiUrl, resolveMediaUrl } from '../lib/runtimeUrls';
 
 function slugify(value) {
   return value
@@ -350,8 +351,8 @@ function pageToForm(page) {
 }
 
 async function requestJson(url, options) {
-  const response = await fetch(url, {
-    credentials: 'same-origin',
+  const response = await fetch(resolveApiUrl(url), {
+    credentials: 'include',
     ...(options || {})
   });
   const data = await response.json().catch(() => ({}));
@@ -1304,7 +1305,7 @@ function AdminConsole({ authUsername, onLogout, onUnauthorized }) {
 
                         {image.src ? (
                           <div className="admin-upload-zone__preview">
-                            <img src={image.thumbnail || image.src} alt={image.alt || `Ảnh sản phẩm ${index + 1}`} />
+                            <img src={resolveMediaUrl(image.thumbnail || image.src)} alt={image.alt || `Ảnh sản phẩm ${index + 1}`} />
                           </div>
                         ) : (
                           <div className="admin-upload-zone__placeholder">
@@ -1534,7 +1535,7 @@ function AdminConsole({ authUsername, onLogout, onUnauthorized }) {
 
                         {image.src ? (
                           <div className="admin-upload-zone__preview">
-                            <img src={image.thumbnail || image.src} alt={image.alt || `Banner ${index + 1}`} />
+                            <img src={resolveMediaUrl(image.thumbnail || image.src)} alt={image.alt || `Banner ${index + 1}`} />
                           </div>
                         ) : (
                           <div className="admin-upload-zone__placeholder">

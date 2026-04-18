@@ -4,11 +4,19 @@ import './loadEnv.js';
 const sessionCookieName = 'admin_session';
 const sessionTtlHours = Number(process.env.ADMIN_SESSION_TTL_HOURS || 8);
 const sessionTtlMs = (Number.isFinite(sessionTtlHours) && sessionTtlHours > 0 ? sessionTtlHours : 8) * 60 * 60 * 1000;
-const isSecureCookie = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === 'production';
 const cookieDomain = String(process.env.ADMIN_COOKIE_DOMAIN || '').trim() || undefined;
 const adminUsername = (process.env.ADMIN_USERNAME || 'admin').trim();
 const adminPassword = typeof process.env.ADMIN_PASSWORD === 'string' ? process.env.ADMIN_PASSWORD : 'admin123';
 const adminSessionSecret = process.env.ADMIN_SESSION_SECRET || 'change-this-admin-session-secret';
+const requestedCookieSameSite = String(process.env.ADMIN_COOKIE_SAME_SITE || '').trim().toLowerCase();
+const sessionCookieSameSite =
+  requestedCookieSameSite === 'strict' || requestedCookieSameSite === 'lax' || requestedCookieSameSite === 'none'
+    ? requestedCookieSameSite
+    : isProduction
+      ? 'none'
+      : 'lax';
+const isSecureCookie = isProduction || sessionCookieSameSite === 'none';
 
 function parseCookies(cookieHeader = '') {
   return cookieHeader
@@ -94,7 +102,8 @@ export function getAdminAuthConfig() {
   return {
     username: adminUsername,
     sessionCookieName,
-    sessionTtlHours: sessionTtlMs / (60 * 60 * 1000)
+    sessionTtlHours: sessionTtlMs / (60 * 60 * 1000),
+    sameSite: sessionCookieSameSite
   };
 }
 
@@ -110,7 +119,7 @@ export function readAdminSession(req) {
 export function setAdminSessionCookie(res, username = adminUsername) {
   res.cookie(sessionCookieName, createSessionToken(username), {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: sessionCookieSameSite,
     secure: isSecureCookie,
     domain: cookieDomain,
     path: '/',
@@ -121,7 +130,7 @@ export function setAdminSessionCookie(res, username = adminUsername) {
 export function clearAdminSessionCookie(res) {
   res.clearCookie(sessionCookieName, {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: sessionCookieSameSite,
     secure: isSecureCookie,
     domain: cookieDomain,
     path: '/'

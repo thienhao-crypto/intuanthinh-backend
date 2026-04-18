@@ -24,8 +24,7 @@ import bannerTwo from './assets/partners/banner (2).jpg';
 import companyLogo from './assets/partners/logo-cty-cropped.png';
 import maintenanceImage from './assets/partners/anhbaotri.png';
 import AdminPage from './admin/AdminPage';
-
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+import { resolveApiUrl } from './lib/runtimeUrls';
 const fanpageUrl = 'https://www.facebook.com/profile.php?id=61573351719593';
 const siteLabel = 'In nhanh - Giá rẻ Tuấn Thịnh';
 const company = siteData.company;
@@ -450,7 +449,7 @@ function buildSupportReply(message) {
 }
 
 async function requestSupportChatReply(message, history) {
-  const response = await fetch(`${apiBaseUrl}/api/support-chat`, {
+  const response = await fetch(resolveApiUrl('/api/support-chat'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -1578,7 +1577,7 @@ function App() {
 
     async function checkBackendAvailability() {
       try {
-        const response = await fetch(`${apiBaseUrl}/api/health`, {
+        const response = await fetch(resolveApiUrl('/api/health'), {
           cache: 'no-store'
         });
 

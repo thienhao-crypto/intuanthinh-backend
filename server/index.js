@@ -124,7 +124,79 @@ const productImageUpload = multer({
   }
 });
 
-app.use(cors());
+function normalizeOrigin(value) {
+  const normalizedValue = typeof value === 'string' ? value.trim() : '';
+
+  if (!normalizedValue) {
+    return '';
+  }
+
+  try {
+    return new URL(normalizedValue).origin;
+  } catch {
+    return normalizedValue.replace(/\/$/, '');
+  }
+}
+
+function expandCorsOriginVariants(origin) {
+  const normalizedOrigin = normalizeOrigin(origin);
+
+  if (!normalizedOrigin) {
+    return [];
+  }
+
+  const variants = new Set([normalizedOrigin]);
+
+  try {
+    const url = new URL(normalizedOrigin);
+    const hostname = url.hostname.toLowerCase();
+    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isIpv4Address = /^\d+\.\d+\.\d+\.\d+$/.test(hostname);
+
+    if (!isLocalHost && !isIpv4Address && hostname.includes('.')) {
+      const alternateHostname = hostname.startsWith('www.') ? hostname.slice(4) : `www.${hostname}`;
+      variants.add(`${url.protocol}//${alternateHostname}${url.port ? `:${url.port}` : ''}`);
+    }
+  } catch {
+    return [...variants];
+  }
+
+  return [...variants];
+}
+
+const allowedCorsOrigins = [
+  siteBaseUrl,
+  process.env.CORS_ALLOWED_ORIGINS,
+  process.env.ALLOWED_ORIGINS,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:4173',
+  'http://127.0.0.1:4173'
+]
+  .flatMap((value) => String(value || '').split(','))
+  .flatMap((value) => expandCorsOriginVariants(value))
+  .filter(Boolean);
+
+const corsOptions = {
+  credentials: true,
+  origin(origin, callback) {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    const normalizedOrigin = normalizeOrigin(origin);
+
+    if (allowedCorsOrigins.includes(normalizedOrigin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`CORS origin not allowed: ${normalizedOrigin}`));
+  }
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 app.use('/uploads', express.static(uploadsRootDir));
 
