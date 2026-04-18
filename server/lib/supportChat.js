@@ -1,17 +1,9 @@
-import { getBootstrapData } from './siteRepository.js';
-
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
-const SUPPORT_CONTEXT_TTL_MS = 5 * 60 * 1000;
 const SUPPORT_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
 const SUPPORT_RATE_LIMIT_MAX_REQUESTS = 12;
 const MAX_HISTORY_MESSAGES = 10;
 const MAX_MESSAGE_LENGTH = 1000;
-
-const supportContextCache = {
-  expiresAt: 0,
-  value: null
-};
 
 const supportRateLimitStore = new Map();
 
@@ -198,24 +190,6 @@ function buildSystemInstruction(knowledgeBase) {
   ].join('\n');
 }
 
-async function getSupportKnowledgeBase(db) {
-  const now = Date.now();
-
-  if (supportContextCache.value && supportContextCache.expiresAt > now) {
-    return supportContextCache.value;
-  }
-
-  const bootstrapData = await getBootstrapData(db);
-  const value = {
-    bootstrapData,
-    knowledgeBase: buildSupportKnowledgeBase(bootstrapData)
-  };
-
-  supportContextCache.value = value;
-  supportContextCache.expiresAt = now + SUPPORT_CONTEXT_TTL_MS;
-  return value;
-}
-
 async function callGeminiApi({ apiKey, model, message, history, systemInstruction }) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 20000);
@@ -274,7 +248,7 @@ async function callGeminiApi({ apiKey, model, message, history, systemInstructio
   }
 }
 
-export async function generateSupportChatReply(db, payload) {
+export async function generateSupportChatReply(bootstrapData, payload) {
   const { apiKey, model } = getSupportChatConfig();
 
   if (!apiKey) {
@@ -283,7 +257,7 @@ export async function generateSupportChatReply(db, payload) {
     throw error;
   }
 
-  const { knowledgeBase } = await getSupportKnowledgeBase(db);
+  const knowledgeBase = buildSupportKnowledgeBase(bootstrapData ?? {});
 
   return callGeminiApi({
     apiKey,

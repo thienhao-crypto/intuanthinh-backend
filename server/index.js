@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import cors from 'cors';
 import express from 'express';
 import multer from 'multer';
+import fallbackSiteData from '../client/src/data/siteData.js';
 import {
   clearAdminSessionCookie,
   getAdminAuthConfig,
@@ -60,13 +61,26 @@ const DB_PACKET_SAFETY_MARGIN_BYTES = 64 * 1024;
 const clientDistDir = fileURLToPath(new URL('../client/dist/', import.meta.url));
 const clientDistIndexFile = fileURLToPath(new URL('../client/dist/index.html', import.meta.url));
 const hasClientDist = existsSync(clientDistIndexFile);
-const db = await openDatabase();
-const mediaMigration = await migrateLegacyProductUploads(db);
-const recruitmentPage = await ensureRecruitmentPage(db);
 const allowedImageExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', '.avif']);
-const productImageUploadLimitBytes = await resolveProductImageUploadLimit(db, PRODUCT_IMAGE_UPLOAD_MAX_BYTES);
-const productImageUploadLimitLabel = formatBinarySize(productImageUploadLimitBytes);
 const siteBaseUrl = resolveSiteUrl(process.env);
+const fallbackBootstrapData = createFallbackBootstrapData(fallbackSiteData, siteBaseUrl);
+let db = null;
+let databaseStartupError = null;
+let mediaMigration = { migratedFiles: 0, skippedFiles: 0 };
+let recruitmentPage = { created: false };
+let productImageUploadLimitBytes = PRODUCT_IMAGE_UPLOAD_MAX_BYTES;
+
+try {
+  db = await openDatabase();
+  mediaMigration = await migrateLegacyProductUploads(db);
+  recruitmentPage = await ensureRecruitmentPage(db);
+  productImageUploadLimitBytes = await resolveProductImageUploadLimit(db, PRODUCT_IMAGE_UPLOAD_MAX_BYTES);
+} catch (error) {
+  databaseStartupError = error;
+  console.error('Database startup failed. Starting in read-only fallback mode.', error);
+}
+
+const productImageUploadLimitLabel = formatBinarySize(productImageUploadLimitBytes);
 
 if (mediaMigration.migratedFiles || mediaMigration.skippedFiles) {
   console.log('Media migration result:', mediaMigration);
@@ -78,6 +92,10 @@ if (recruitmentPage.created) {
 
 if (!hasClientDist) {
   console.warn('Client build not found in client/dist. Run "npm run build" before starting the production server.');
+}
+
+if (!db) {
+  console.warn('MySQL is unavailable. Public routes will use bundled fallback data until the database connection is restored.');
 }
 
 if (productImageUploadLimitBytes < PRODUCT_IMAGE_UPLOAD_MAX_BYTES) {
@@ -140,6 +158,170 @@ function formatBinarySize(bytes) {
   }
 
   return `${Math.round(normalizedBytes)}B`;
+}
+
+function createFallbackBootstrapData(siteData, siteUrl) {
+  return {
+    generatedAt: siteData?.generatedAt ?? null,
+    source: {
+      ...(siteData?.source ?? {}),
+      siteUrl: normalizeText(siteData?.source?.siteUrl) || siteUrl
+    },
+    company: siteData?.company ?? null,
+    showcaseBanners: Array.isArray(siteData?.showcaseBanners) ? siteData.showcaseBanners.filter((item) => normalizeText(item?.src)) : [],
+    pages: Array.isArray(siteData?.pages) ? siteData.pages : [],
+    categories: Array.isArray(siteData?.categories) ? siteData.categories : [],
+    products: Array.isArray(siteData?.products) ? siteData.products : [],
+    pricingOptions: Array.isArray(siteData?.pricingOptions) ? siteData.pricingOptions : []
+  };
+}
+
+function isPageVisible(page, includeUnpublished = false) {
+  return includeUnpublished || page?.isPublished !== false;
+}
+
+function getFallbackBootstrapData() {
+  return fallbackBootstrapData;
+}
+
+function getFallbackCompany() {
+  return fallbackBootstrapData.company;
+}
+
+function getFallbackShowcaseBannerItems() {
+  return fallbackBootstrapData.showcaseBanners;
+}
+
+function getFallbackPages(options = {}) {
+  const includeUnpublished = options?.includeUnpublished === true;
+  return fallbackBootstrapData.pages.filter((page) => isPageVisible(page, includeUnpublished));
+}
+
+function getFallbackPageBySlug(slug, options = {}) {
+  return getFallbackPages(options).find((page) => page?.slug === slug) ?? null;
+}
+
+function getFallbackCategories() {
+  return fallbackBootstrapData.categories;
+}
+
+function getFallbackCategoryBySlug(slug) {
+  return getFallbackCategories().find((category) => category?.slug === slug) ?? null;
+}
+
+function getFallbackProducts() {
+  return fallbackBootstrapData.products;
+}
+
+function getFallbackProductById(id) {
+  const normalizedId = Number(id);
+  return getFallbackProducts().find((product) => Number(product?.id) === normalizedId) ?? null;
+}
+
+function getFallbackProductBySlug(slug) {
+  return getFallbackProducts().find((product) => product?.slug === slug) ?? null;
+}
+
+function listFallbackProductsByCategorySlug(categorySlug) {
+  const category = getFallbackCategoryBySlug(categorySlug);
+
+  if (!category) {
+    return [];
+  }
+
+  const relatedSlugs = new Set([category.slug, ...(Array.isArray(category.children) ? category.children : [])]);
+
+  return getFallbackProducts().filter((product) =>
+    (Array.isArray(product?.categories) ? product.categories : []).some((item) => relatedSlugs.has(item?.slug))
+  );
+}
+
+function getFallbackPricingOptions() {
+  return fallbackBootstrapData.pricingOptions;
+}
+
+function isDatabaseAvailable() {
+  return Boolean(db);
+}
+
+function respondDatabaseUnavailable(res) {
+  return res.status(503).json({
+    error: 'Co so du lieu tam thoi khong san sang. Server dang chay o che do chi doc.'
+  });
+}
+
+function ensureDatabaseAvailable(res) {
+  if (isDatabaseAvailable()) {
+    return true;
+  }
+
+  respondDatabaseUnavailable(res);
+  return false;
+}
+
+async function readWithFallback(label, readFromDatabase, readFromFallback) {
+  if (!isDatabaseAvailable()) {
+    return readFromFallback();
+  }
+
+  try {
+    return await readFromDatabase();
+  } catch (error) {
+    console.error(`Database read failed for ${label}. Serving fallback data instead.`, error);
+    return readFromFallback();
+  }
+}
+
+async function loadBootstrapData() {
+  return readWithFallback('bootstrap data', () => getBootstrapData(db), getFallbackBootstrapData);
+}
+
+async function loadCompany() {
+  return readWithFallback('company', () => getCompany(db), getFallbackCompany);
+}
+
+async function loadShowcaseBanners() {
+  return readWithFallback('showcase banners', () => getShowcaseBanners(db), getFallbackShowcaseBannerItems);
+}
+
+async function loadPages(options = {}) {
+  return readWithFallback('pages', () => listPages(db, options), () => getFallbackPages(options));
+}
+
+async function loadPageBySlug(slug, options = {}) {
+  return readWithFallback(`page ${slug}`, () => getPageBySlug(db, slug, options), () => getFallbackPageBySlug(slug, options));
+}
+
+async function loadCategories() {
+  return readWithFallback('categories', () => listCategories(db), getFallbackCategories);
+}
+
+async function loadCategoryBySlug(slug) {
+  return readWithFallback(`category ${slug}`, () => getCategoryBySlug(db, slug), () => getFallbackCategoryBySlug(slug));
+}
+
+async function loadProducts() {
+  return readWithFallback('products', () => listProducts(db), getFallbackProducts);
+}
+
+async function loadProductById(id) {
+  return readWithFallback(`product id ${id}`, () => getProductById(db, Number(id)), () => getFallbackProductById(id));
+}
+
+async function loadProductBySlug(slug) {
+  return readWithFallback(`product ${slug}`, () => getProductBySlug(db, slug), () => getFallbackProductBySlug(slug));
+}
+
+async function loadProductsByCategorySlug(slug) {
+  return readWithFallback(
+    `products for category ${slug}`,
+    () => listProductsByCategorySlug(db, slug),
+    () => listFallbackProductsByCategorySlug(slug)
+  );
+}
+
+async function loadPricingOptions() {
+  return readWithFallback('pricing options', () => listPricingOptions(db), getFallbackPricingOptions);
 }
 
 async function resolveProductImageUploadLimit(db, desiredLimitBytes) {
@@ -381,7 +563,7 @@ app.get(
 app.get(
   '/sitemap.xml',
   asyncHandler(async (_req, res) => {
-    const bootstrapData = await getBootstrapData(db);
+    const bootstrapData = await loadBootstrapData();
 
     res.type('application/xml; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=3600');
@@ -400,13 +582,31 @@ app.get(
 app.get(
   '/api/health',
   asyncHandler(async (_req, res) => {
-    await db.execute('SELECT 1 AS ok');
+    if (isDatabaseAvailable()) {
+      try {
+        await db.execute('SELECT 1 AS ok');
 
-    res.json({
-      status: 'ok',
+        return res.json({
+          status: 'ok',
+          database: {
+            engine: 'mysql',
+            connected: true,
+            fallback: false,
+            ...getDatabaseConfig()
+          }
+        });
+      } catch (error) {
+        console.error('Database health check failed. Reporting degraded status.', error);
+      }
+    }
+
+    return res.json({
+      status: 'degraded',
       database: {
         engine: 'mysql',
-        connected: true,
+        connected: false,
+        fallback: true,
+        startupErrorCode: databaseStartupError?.code ?? null,
         ...getDatabaseConfig()
       }
     });
@@ -416,6 +616,10 @@ app.get(
 app.get(
   '/api/media/:id',
   asyncHandler(async (req, res) => {
+    if (!ensureDatabaseAvailable(res)) {
+      return;
+    }
+
     const asset = await getMediaAssetById(db, Number(req.params.id));
 
     if (!asset) {
@@ -433,28 +637,28 @@ app.get(
 app.get(
   '/api/bootstrap',
   asyncHandler(async (_req, res) => {
-    res.json(await getBootstrapData(db));
+    res.json(await loadBootstrapData());
   })
 );
 
 app.get(
   '/api/company',
   asyncHandler(async (_req, res) => {
-    res.json(await getCompany(db));
+    res.json(await loadCompany());
   })
 );
 
 app.get(
   '/api/pages',
   asyncHandler(async (_req, res) => {
-    res.json(await listPages(db));
+    res.json(await loadPages());
   })
 );
 
 app.get(
   '/api/pages/:slug',
   asyncHandler(async (req, res) => {
-    const page = await getPageBySlug(db, req.params.slug);
+    const page = await loadPageBySlug(req.params.slug);
 
     if (!page) {
       return respondNotFound(res, 'Trang');
@@ -467,14 +671,14 @@ app.get(
 app.get(
   '/api/categories',
   asyncHandler(async (_req, res) => {
-    res.json(await listCategories(db));
+    res.json(await loadCategories());
   })
 );
 
 app.get(
   '/api/categories/:slug',
   asyncHandler(async (req, res) => {
-    const category = await getCategoryBySlug(db, req.params.slug);
+    const category = await loadCategoryBySlug(req.params.slug);
 
     if (!category) {
       return respondNotFound(res, 'Danh mục');
@@ -487,7 +691,7 @@ app.get(
 app.get(
   '/api/categories/:slug/products',
   asyncHandler(async (req, res) => {
-    const category = await getCategoryBySlug(db, req.params.slug);
+    const category = await loadCategoryBySlug(req.params.slug);
 
     if (!category) {
       return respondNotFound(res, 'Danh mục');
@@ -495,7 +699,7 @@ app.get(
 
     return res.json({
       category,
-      products: await listProductsByCategorySlug(db, req.params.slug)
+      products: await loadProductsByCategorySlug(req.params.slug)
     });
   })
 );
@@ -503,21 +707,21 @@ app.get(
 app.get(
   '/api/products',
   asyncHandler(async (_req, res) => {
-    res.json(await listProducts(db));
+    res.json(await loadProducts());
   })
 );
 
 app.get(
   '/api/pricing-options',
   asyncHandler(async (_req, res) => {
-    res.json(await listPricingOptions(db));
+    res.json(await loadPricingOptions());
   })
 );
 
 app.get(
   '/api/products/:slug',
   asyncHandler(async (req, res) => {
-    const product = await getProductBySlug(db, req.params.slug);
+    const product = await loadProductBySlug(req.params.slug);
 
     if (!product) {
       return respondNotFound(res, 'Sản phẩm');
@@ -579,6 +783,10 @@ app.post(
   '/api/admin/uploads/product-image',
   productImageUpload.single('image'),
   asyncHandler(async (req, res) => {
+    if (!ensureDatabaseAvailable(res)) {
+      return;
+    }
+
     if (!req.file) {
       return res.status(400).json({
         error: 'Chưa có file ảnh.'
@@ -607,6 +815,10 @@ app.post(
 app.delete(
   '/api/admin/uploads/product-image',
   asyncHandler(async (req, res) => {
+    if (!ensureDatabaseAvailable(res)) {
+      return;
+    }
+
     const paths = [...new Set((Array.isArray(req.body?.paths) ? req.body.paths : []).map((value) => normalizeText(value)).filter(Boolean))];
 
     if (!paths.length) {
@@ -637,7 +849,7 @@ app.post(
       });
     }
 
-    const reply = await generateSupportChatReply(db, validation.value);
+    const reply = await generateSupportChatReply(await loadBootstrapData(), validation.value);
 
     return res.json({
       reply
@@ -648,6 +860,10 @@ app.post(
 app.post(
   '/api/contact-submissions',
   asyncHandler(async (req, res) => {
+    if (!ensureDatabaseAvailable(res)) {
+      return;
+    }
+
     const validation = validateContactPayload(req.body);
 
     if (!validation.isValid) {
@@ -669,27 +885,31 @@ app.post(
 app.get(
   '/api/admin/products',
   asyncHandler(async (_req, res) => {
-    res.json(await listProducts(db));
+    res.json(await loadProducts());
   })
 );
 
 app.get(
   '/api/admin/pages',
   asyncHandler(async (_req, res) => {
-    res.json(await listPages(db, { includeUnpublished: true }));
+    res.json(await loadPages({ includeUnpublished: true }));
   })
 );
 
 app.get(
   '/api/admin/showcase-banners',
   asyncHandler(async (_req, res) => {
-    res.json(await getShowcaseBanners(db));
+    res.json(await loadShowcaseBanners());
   })
 );
 
 app.post(
   '/api/admin/products',
   asyncHandler(async (req, res) => {
+    if (!ensureDatabaseAvailable(res)) {
+      return;
+    }
+
     const validation = validateProductPayload(req.body);
 
     if (!validation.isValid) {
@@ -711,6 +931,10 @@ app.post(
 app.put(
   '/api/admin/products/:id',
   asyncHandler(async (req, res) => {
+    if (!ensureDatabaseAvailable(res)) {
+      return;
+    }
+
     const validation = validateProductPayload(req.body);
 
     if (!validation.isValid) {
@@ -736,7 +960,11 @@ app.put(
 app.delete(
   '/api/admin/products/:id',
   asyncHandler(async (req, res) => {
-    const existing = await getProductById(db, Number(req.params.id));
+    if (!ensureDatabaseAvailable(res)) {
+      return;
+    }
+
+    const existing = await loadProductById(req.params.id);
 
     if (!existing) {
       return respondNotFound(res, 'Sản phẩm');
@@ -753,6 +981,10 @@ app.delete(
 app.put(
   '/api/admin/pages/:slug',
   asyncHandler(async (req, res) => {
+    if (!ensureDatabaseAvailable(res)) {
+      return;
+    }
+
     const slug = slugify(req.params.slug);
     const validation = validatePagePayload(req.body, slug);
 
@@ -775,6 +1007,10 @@ app.put(
 app.patch(
   '/api/admin/pages/:slug/visibility',
   asyncHandler(async (req, res) => {
+    if (!ensureDatabaseAvailable(res)) {
+      return;
+    }
+
     const slug = slugify(req.params.slug);
     const validation = validatePageVisibilityPayload(req.body);
 
@@ -807,6 +1043,10 @@ app.patch(
 app.put(
   '/api/admin/showcase-banners',
   asyncHandler(async (req, res) => {
+    if (!ensureDatabaseAvailable(res)) {
+      return;
+    }
+
     const validation = validateShowcaseBannersPayload(req.body);
 
     if (!validation.isValid) {
@@ -828,13 +1068,17 @@ app.put(
 app.get(
   '/api/admin/pricing-options',
   asyncHandler(async (_req, res) => {
-    res.json(await listPricingOptions(db));
+    res.json(await loadPricingOptions());
   })
 );
 
 app.post(
   '/api/admin/pricing-options',
   asyncHandler(async (req, res) => {
+    if (!ensureDatabaseAvailable(res)) {
+      return;
+    }
+
     const validation = validatePricingPayload(req.body);
 
     if (!validation.isValid) {
@@ -856,6 +1100,10 @@ app.post(
 app.put(
   '/api/admin/pricing-options/:code',
   asyncHandler(async (req, res) => {
+    if (!ensureDatabaseAvailable(res)) {
+      return;
+    }
+
     const validation = validatePricingPayload(req.body);
 
     if (!validation.isValid) {
@@ -881,6 +1129,10 @@ app.put(
 app.delete(
   '/api/admin/pricing-options/:code',
   asyncHandler(async (req, res) => {
+    if (!ensureDatabaseAvailable(res)) {
+      return;
+    }
+
     const deleted = await deletePricingOption(db, req.params.code);
 
     if (!deleted) {
@@ -915,7 +1167,7 @@ app.use((error, _req, res, _next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
-        error: 'File ảnh vượt quá giới hạn 10MB.'
+        error: `File anh vuot qua gioi han ${productImageUploadLimitLabel}.`
       });
     }
 
