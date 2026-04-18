@@ -1570,68 +1570,6 @@ function AppRoutes() {
 }
 
 function App() {
-  const [isBackendAvailable, setIsBackendAvailable] = useState(true);
-
-  useEffect(() => {
-    let isCancelled = false;
-
-    async function checkBackendAvailability() {
-      try {
-        const response = await fetch(resolveApiUrl('/api/health'), {
-          cache: 'no-store'
-        });
-
-        if (!response.ok) {
-          throw new Error(`Health request failed with ${response.status}`);
-        }
-
-        if (!isCancelled) {
-          setIsBackendAvailable(true);
-        }
-      } catch (error) {
-        console.error('Backend health check failed.', error);
-
-        if (!isCancelled) {
-          setIsBackendAvailable(false);
-        }
-      }
-    }
-
-    checkBackendAvailability();
-    const intervalId = window.setInterval(checkBackendAvailability, 15000);
-
-    return () => {
-      isCancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, []);
-
-  if (!isBackendAvailable) {
-    return (
-      <main
-        style={{
-          minHeight: '100vh',
-          display: 'grid',
-          placeItems: 'center',
-          padding: '24px',
-          background: '#f4efe6'
-        }}
-      >
-        <img
-          src={maintenanceImage}
-          alt="Trang bao tri"
-          style={{
-            display: 'block',
-            width: 'min(960px, 100%)',
-            height: 'auto',
-            borderRadius: '20px',
-            boxShadow: '0 24px 80px rgba(47, 31, 20, 0.12)'
-          }}
-        />
-      </main>
-    );
-  }
-
   return (
     <BrowserRouter>
       <AppRoutes />

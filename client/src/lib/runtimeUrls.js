@@ -1,4 +1,4 @@
-export const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+export const apiBaseUrl = 'https://intuanthinh-backend.onrender.com';
 
 function normalizeUrl(value) {
   return typeof value === 'string' ? value.trim() : '';

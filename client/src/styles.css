@@ -23,6 +23,7 @@
   --radius-xl: 32px;
   --radius-lg: 24px;
   --radius-md: 18px;
+  --chat-fab-height: 58px;
 }
 
 * {
@@ -1219,7 +1220,7 @@ img {
 .chat-widget {
   position: fixed;
   right: 24px;
-  bottom: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   z-index: 40;
   display: grid;
   justify-items: end;
@@ -1240,7 +1241,7 @@ img {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  min-height: 58px;
+  min-height: var(--chat-fab-height);
   padding: 0 18px 0 14px;
   border: 0;
   border-radius: 999px;
@@ -2141,6 +2142,7 @@ img {
 @media (max-width: 860px) {
   .site-shell {
     padding: 16px;
+    padding-bottom: calc(var(--chat-fab-height) + 40px + env(safe-area-inset-bottom, 0px));
   }
 
   .site-header {
@@ -2314,7 +2316,7 @@ img {
 
   .chat-widget {
     right: 16px;
-    bottom: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     left: 16px;
     justify-items: stretch;
   }

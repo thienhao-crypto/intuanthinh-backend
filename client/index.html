@@ -3,22 +3,221 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="shortcut icon" type="image/png" href="/favicon.png" />
-    <title>In nhanh - Giá rẻ Tuấn Thịnh</title>
+    <meta name="theme-color" content="#0f5d92" />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="In nhanh - Giá rẻ Tuấn Thịnh" />
     <meta
       name="description"
-      content="In nhanh - Giá rẻ Tuấn Thịnh với giao diện hiện đại, tối ưu trải nghiệm trên PC và mobile."
+      content="In nhanh - Giá rẻ Tuấn Thịnh chuyên in offset, bao bì giấy, tem nhãn, tờ rơi, danh thiếp, hộp giấy và nhiều ấn phẩm theo yêu cầu tại TP.HCM."
     />
+    <meta
+      name="keywords"
+      content="in nhanh, in giá rẻ, in offset, in bao bì, in tem nhãn, in tờ rơi, in danh thiếp, in hộp giấy, Tuấn Thịnh"
+    />
+    <link rel="canonical" href="https://intuanthinh.com/" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="shortcut icon" type="image/png" href="/favicon.png" />
+
+    <meta property="og:locale" content="vi_VN" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="In nhanh - Giá rẻ Tuấn Thịnh" />
+    <meta property="og:title" content="In nhanh - Giá rẻ Tuấn Thịnh | In ấn theo yêu cầu tại TP.HCM" />
+    <meta
+      property="og:description"
+      content="Dịch vụ in nhanh, in offset, bao bì giấy, tem nhãn, tờ rơi, danh thiếp và ấn phẩm quảng cáo với quy trình linh hoạt, hỗ trợ báo giá nhanh."
+    />
+    <meta property="og:url" content="https://intuanthinh.com/" />
+    <meta property="og:image" content="https://intuanthinh.com/favicon.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="In nhanh - Giá rẻ Tuấn Thịnh | In ấn theo yêu cầu tại TP.HCM" />
+    <meta
+      name="twitter:description"
+      content="Chuyên in nhanh, in offset, bao bì, tem nhãn, tờ rơi, hộp giấy và nhiều ấn phẩm cho doanh nghiệp."
+    />
+    <meta name="twitter:image" content="https://intuanthinh.com/favicon.png" />
+
+    <title>In nhanh - Giá rẻ Tuấn Thịnh | In offset, bao bì, tem nhãn tại TP.HCM</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
+
+    <style>
+      body {
+        margin: 0;
+        font-family: 'Be Vietnam Pro', sans-serif;
+      }
+
+      .contact-actions {
+        position: fixed;
+        left: 16px;
+        bottom: 20px;
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .contact-actions a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        transition:
+          transform 180ms ease,
+          box-shadow 180ms ease,
+          border-color 180ms ease;
+      }
+
+      .contact-actions a:hover {
+        transform: translateY(-2px);
+      }
+
+      .contact-actions__call {
+        gap: 10px;
+        padding: 12px 18px 12px 14px;
+        border-radius: 999px;
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #ff7a1a, #ff5b2e);
+        box-shadow: 0 14px 30px rgba(255, 102, 41, 0.24);
+      }
+
+      .contact-actions__zalo {
+        width: 58px;
+        height: 58px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 104, 255, 0.14);
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 14px 30px rgba(0, 87, 216, 0.18);
+      }
+
+      .contact-actions__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        flex: 0 0 34px;
+      }
+
+      .contact-actions__call-icon {
+        background: rgba(255, 255, 255, 0.18);
+      }
+
+      .contact-actions__icon svg {
+        display: block;
+        width: 20px;
+        height: 20px;
+      }
+
+      .contact-actions__label {
+        line-height: 1;
+      }
+
+      .contact-actions__zalo svg {
+        display: block;
+        width: 34px;
+        height: 34px;
+      }
+
+      .seo-support {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      @media (max-width: 767px) {
+        .contact-actions {
+          left: 12px;
+          bottom: 14px;
+          gap: 10px;
+        }
+
+        .contact-actions__call {
+          padding: 11px 15px 11px 13px;
+          font-size: 13px;
+        }
+
+        .contact-actions__zalo {
+          width: 54px;
+          height: 54px;
+        }
+      }
+    </style>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "In nhanh - Giá rẻ Tuấn Thịnh",
+        "url": "https://intuanthinh.com/",
+        "telephone": "0915109697",
+        "email": "18huongpham@gmail.com",
+        "image": "https://intuanthinh.com/favicon.png",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "101/17/3 Gò Dầu, Phú Thọ Hòa",
+          "addressLocality": "TP.HCM",
+          "addressCountry": "VN"
+        },
+        "sameAs": ["https://zalo.me/0915109697"]
+      }
+    </script>
   </head>
   <body>
+    <div class="seo-support">
+      In nhanh - Giá rẻ Tuấn Thịnh chuyên in offset, bao bì giấy, tem nhãn, tờ rơi, danh thiếp, hộp giấy, nhận file
+      nhanh và hỗ trợ báo giá linh hoạt cho khách hàng doanh nghiệp.
+    </div>
+
     <div id="root"></div>
+
+    <nav class="contact-actions" aria-label="Liên hệ nhanh">
+      <a class="contact-actions__call" href="tel:0915109697">
+        <span class="contact-actions__icon contact-actions__call-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M6.9 4.2C7.2 3.5 8 3.2 8.7 3.5L11.3 4.6C12 4.9 12.4 5.7 12.2 6.4L11.7 8.6C11.6 9.1 11.7 9.6 12 9.9L14.1 12C14.4 12.3 14.9 12.4 15.4 12.3L17.6 11.8C18.3 11.6 19.1 12 19.4 12.7L20.5 15.3C20.8 16 20.5 16.8 19.8 17.1L18 17.9C16.6 18.5 15 18.4 13.7 17.6C10.8 15.9 8.1 13.2 6.4 10.3C5.6 9 5.5 7.4 6.1 6L6.9 4.2Z"
+              fill="#ffffff"
+            />
+          </svg>
+        </span>
+        <span class="contact-actions__label">Gọi 0915 10 9697</span>
+      </a>
+      <a class="contact-actions__zalo" href="https://zalo.me/0915109697" target="_blank" rel="noreferrer" aria-label="Chat Zalo">
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="32" cy="32" r="30" fill="url(#zaloGradient)" />
+          <path
+            d="M18 24C18 20.7 20.7 18 24 18H40C43.3 18 46 20.7 46 24V35C46 38.3 43.3 41 40 41H28.6L20.5 46.6L22.2 39.8C19.7 39.1 18 36.8 18 34.1V24Z"
+            fill="#ffffff"
+          />
+          <text x="32" y="34.5" text-anchor="middle" font-family="Arial, sans-serif" font-size="10.5" font-weight="700" fill="#005AE0">
+            Zalo
+          </text>
+          <defs>
+            <linearGradient id="zaloGradient" x1="8" y1="10" x2="56" y2="54" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#15A2FF" />
+              <stop offset="1" stop-color="#005AE0" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </a>
+    </nav>
+
+    <noscript>Vui lòng bật JavaScript để xem đầy đủ nội dung website in ấn Tuấn Thịnh.</noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
