@@ -2317,17 +2317,24 @@ img {
   .chat-widget {
     right: 16px;
     bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-    left: 16px;
-    justify-items: stretch;
+    left: auto;
+    justify-items: end;
   }
 
   .chat-fab {
-    width: 100%;
+    width: auto;
+    width: var(--chat-fab-height);
+    max-width: none;
+    padding: 0;
     justify-content: center;
   }
 
+  .chat-fab__label {
+    display: none;
+  }
+
   .chat-panel {
-    width: 100%;
+    width: min(380px, calc(100vw - 32px));
     max-height: min(720px, calc(100dvh - 88px));
   }
 

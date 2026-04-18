@@ -142,18 +142,25 @@
       @media (max-width: 767px) {
         .contact-actions {
           left: 12px;
-          bottom: 14px;
+          bottom: calc(14px + env(safe-area-inset-bottom, 0px));
           gap: 10px;
         }
 
         .contact-actions__call {
-          padding: 11px 15px 11px 13px;
-          font-size: 13px;
+          width: 54px;
+          height: 54px;
+          padding: 0;
+          gap: 0;
+          border-radius: 999px;
         }
 
         .contact-actions__zalo {
           width: 54px;
           height: 54px;
+        }
+
+        .contact-actions__label {
+          display: none;
         }
       }
     </style>
@@ -186,7 +193,7 @@
     <div id="root"></div>
 
     <nav class="contact-actions" aria-label="Liên hệ nhanh">
-      <a class="contact-actions__call" href="tel:0915109697">
+      <a class="contact-actions__call" href="tel:0915109697" aria-label="Gọi 0915 10 9697">
         <span class="contact-actions__icon contact-actions__call-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
